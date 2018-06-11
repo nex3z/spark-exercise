@@ -2,7 +2,7 @@ from pyspark import SparkConf, SparkContext
 
 
 def main():
-    conf = SparkConf().setMaster('local').setAppName('my-app')
+    conf = SparkConf()
     sc = SparkContext(conf=conf)
     sc.setLogLevel("ERROR")
 
