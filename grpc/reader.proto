@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "nex3z.examples.grpcreader";
+option java_outer_classname = "ReaderProto";
+option objc_class_prefix = "HLW";
+
+package grpcreader;
+
+service Reader {
+  rpc ReadFile (ReadRequest) returns (ReadReply) {}
+}
+
+message ReadRequest {
+  string filename = 1;
+}
+
+message ReadReply {
+  string content = 1;
+}
