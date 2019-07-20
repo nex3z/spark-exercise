@@ -15,7 +15,7 @@ public class Main {
     private static final String TOPIC = "Passenger";
     private static final String TOPIC_OUTPUT = "PassengerCount";
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         SparkSession spark = SparkSession
                 .builder()
                 .appName("PassengerCount")
@@ -43,14 +43,24 @@ public class Main {
                 .groupBy(col("shopName"), window(col("arriveTime"), "5 seconds", "5 seconds"))
                 .agg(count("shopName").as("count"));
 
-        dfCount.selectExpr("CAST(shopName AS STRING) AS key", "CAST(count AS STRING) AS value")
-                .writeStream()
+        Dataset<Row> dfFormatted = dfCount
+                .withColumn("date", from_unixtime(unix_timestamp(col("window.start")), "yyyyMMdd"))
+                .withColumn("start", from_unixtime(unix_timestamp(col("window.start")), "yyyyMMddHHmmss"))
+                .withColumn("end", from_unixtime(unix_timestamp(col("window.end")), "yyyyMMddHHmmss"))
+                .select("shopName", "date", "start", "end", "count");
+
+        Dataset<Row> dfJson = dfFormatted.selectExpr(
+                "concat(shopName, '-', date) AS key",
+                "to_json(struct(shopName, start, end, count)) AS value"
+        );
+
+        dfJson.writeStream()
                 .format("kafka")
                 .option("kafka.bootstrap.servers", SERVERS)
-                .option("topic", "PassengerCount")
+                .option("topic", TOPIC_OUTPUT)
                 .start();
 
-        dfCount.writeStream()
+        dfJson.writeStream()
                 .outputMode(OutputMode.Append())
                 .format("console")
                 .option("truncate", false)
